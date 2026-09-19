@@ -1,6 +1,9 @@
 import sys
 import tkinter as tk
 from tkinter import scrolledtext
+import json
+from datetime import date, datetime
+from pathlib import Path
 
 
 class PrintRedirector:
@@ -18,23 +21,52 @@ class PrintRedirector:
     def flush(self):
         pass
 
-#global list to store readings
-stored_readings = [183,]
+DATA_FILE = Path(__file__).parent / "readings.json"
+
+def load_readings():
+    if not DATA_FILE.exists():
+        return []
+    try:
+        return json.loads(DATA_FILE.read_text())
+    except json.JSONDecodeError:
+        return []
+
+def save_readings(readings):
+    DATA_FILE.write_text(json.dumps(readings, indent=2))
+
+readings = load_readings()
+
 
 def handle_reading(reading):
+    # for what the user is entering to make sure it is a valid number(integer)
     try:
         new_reading = int(reading)
     except ValueError:
         print("Please enter a valid number.")
         return
-    
-    prev_reading = stored_readings[-1]
 
-    print(f"Reading received: {reading}")
-    if new_reading > prev_reading:
-        print(f"Your resting blood sugar is up {new_reading - prev_reading} points")
+    print(f"reading received: {new_reading}")
+
+
+    if readings:
+        prev_reading = readings[-1]["reading"]
+        diff = new_reading - prev_reading
+
+        if diff > 0:
+            print(f"Your resting blood sugar is up {diff} points.")
+        elif diff < 0:
+            print(f"Your resting blood sugar is down {abs(diff)} points.")
     else:
-        print(f"Your resting blood sugar is down {prev_reading - new_reading} points")
+        print("This is your first reading!")
+
+    # append our json to add the reading to the file
+    readings.append({
+        "date": date.today().isoformat(),
+        "time": datetime.now().strftime("%H:%M"),
+        "reading": new_reading
+    })
+    save_readings(readings)
+    print(f"Saved: {new_reading}")
 
 
 
